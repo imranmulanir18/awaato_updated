@@ -42,6 +42,7 @@ class LoginController extends Controller
     {
               
         $arrOutputData = [];
+		$baseUrl = URL::to('/');
         $strStatus = trans('user.error');
         $arrOutputData['mailverification'] = $arrOutputData['google2faauth'] = $arrOutputData['mailotp'] = $arrOutputData['mobileverification'] = $arrOutputData['otpmode'] = 'FALSE';
 		
@@ -59,7 +60,7 @@ class LoginController extends Controller
 				return redirect('/sign-in')->withErrors($validator)->withInput();
 			}else{
 
-				$userData = User::select('bcrypt_password','password')->where([['user_id'=>$request['user_id'],'type'=>'User']])->first();
+				$userData = User::select('bcrypt_password','password','id')->where(['user_id'=>$request['user_id'],'type'=>'User'])->first();
 				if (empty($userData)) {
 					return back()->withErrors(['message'=>'User does not exist.']); 
 				} else {
@@ -69,7 +70,7 @@ class LoginController extends Controller
 						$request['password'] = decrypt($userData->password);
 						$flag = 1;
 					}
-
+					
 					if (!Hash::check($request['password'], $userData->bcrypt_password) && $flag == 0) {
 
 						$getCurrentUserLoginIp = getIPAddress();
@@ -162,147 +163,49 @@ class LoginController extends Controller
 								
 							}	
 	
-							$updt_touser = UserModel::where('user_id',$request->user_id)->update($updateDataNew);
+							$updt_touser = User::where('user_id',$request->user_id)->update($updateDataNew);
 							return back()->withErrors(['message'=>$message]); 
-					}
-				}
+					}else{
 
-				// check user status
-                $arrWhere = ['user_id'=> $request['user_id'],'status'=>'Active'];
-                $userDataActive = User::select('bcrypt_password')->where($arrWhere)->first();
-                if(empty($userDataActive)) {
-                    $message = 'User is inactive,Please contact to admin';
-                    return back()->withErrors(['message'=>$message]); 
-                }
-			
-			}
-
-			$user_exists= User::select('ublock_ip_address_time')->where('user_id',$request['user_id'])->where('type','')->first();
-			if(!empty($user_exists))
-			{
-					 
-				if($user_exists->ublock_ip_address_time != null)
-				{
-						$expire_time = \Carbon\Carbon::now()->toDateTimeString();
-						if($expire_time > $user_exists->ublock_ip_address_time)
+						// check user status
+						$arrWhere = ['user_id'=> $request['user_id'],'status'=>'Active'];
+						$userDataActive = User::select('bcrypt_password')->where($arrWhere)->first();
+						if(empty($userDataActive)) {
+							$message = 'User is inactive,Please contact to admin';
+							return back()->withErrors(['message'=>$message]); 
+						}
+						
+						$user_exists= User::select('ublock_ip_address_time')->where('user_id',$request['user_id'])->where('type','')->first();
+						if(!empty($user_exists))
 						{
-							$updateData=array(); 
-							$updateData['ublock_ip_address_time'] = null;
-							$updateData['invalid_login_attempt'] = 0;
-							$updateData=User::where('user_id',$request['user_id'])->update($updateData);
+								
+							if($user_exists->ublock_ip_address_time != null)
+							{
+									$expire_time = \Carbon\Carbon::now()->toDateTimeString();
+									if($expire_time > $user_exists->ublock_ip_address_time)
+									{
+										$updateData=array(); 
+										$updateData['ublock_ip_address_time'] = null;
+										$updateData['invalid_login_attempt'] = 0;
+										$updateData = User::where('user_id',$request['user_id'])->update($updateData);
+									}
+									else
+									{	
+										$message = 'Login Restricted Till'.$user_exists->ublock_ip_address_time;
+										return back()->withErrors(['message'=>$message]); 
+									}
+							}
+						}else{
+							Auth::loginUsingId($userData->id); 
+							return redirect('/dashboard');
 						}
-						else
-						{	
-							$message = 'Login Restricted Till'.$user_exists->ublock_ip_address_time;
-							return back()->withErrors(['message'=>$message]); 
-						}
+						
+					}
+
+					
 				}
 			}
-
-			
-            // $http = new Client();
-			// $response = $http->post($baseUrl . '/oauth/token', [
-			// 	'form_params' => [
-			// 		'grant_type' => 'password',
-			// 		'client_id' => "6",
-			// 		'client_secret' => "e4s9XtT5RlyXqNAdZYK5xgnSs6xh5NX76NviQ2TH",
-			// 		/* 'client_id' => env('CLIENT_ID'),
-			// 		'client_secret' => env('CLIENT_SECRETE'), */
-			// 		'username' => $request['user_id'],
-			// 		'password' => $request['password'],
-			// 		'scope' => '*',
-			// 		//'code' => $request->code
-			// 	],
-			// ]);
-		
-			// $intCode = Response::HTTP_OK;
-			// $strMessage = "Login successful.";
-			// $strStatus = Response::$statusTexts[$intCode];
-			// //print_r($response); die;
-			// $passportResponse = json_decode((string) $response->getBody());
-			// //dd($passportResponse);
-			// $client = new GuzzleHttp\Client;
-			// $userRequest = $client->request('GET', $baseUrl.'/api/user', [
-			// 'headers' => [
-			// 'Accept' => 'application/json',
-			// 'Authorization' => 'Bearer '.$passportResponse->access_token,
-			// ],
-			// ]);
-			// $userData = json_decode((string) $userRequest->getBody());
-			// //dd($user);
-			// $strTok = $passportResponse->access_token;
-			// $arrOutputData['access_token'] = $strTok;
-			// //check for master password
-			// //check for master password
-			// $user = $userData;
-
-            // if (!empty($user)) {
-            //     $arrOutputData['mobileverification'] = 'TRUE';
-            //     $arrOutputData['mailverification'] = 'TRUE';
-            //     $arrOutputData['google2faauth'] = 'FALSE';
-            //     $arrOutputData['mailotp'] = 'FALSE';
-            //     $arrOutputData['otpmode'] = 'FALSE';
-            //     $arrOutputData['master_pwd'] = 'FALSE';
-            //     $date = \Carbon\Carbon::now();
-            //     $today = $date->toDateTimeString();
-            //    /*  $actdata = array();
-            //     $actdata['id'] = $user->id;
-            //     $actdata['message'] = 'Login successfully with IP address ( ' . $request->ip() . ' ) at time (' . $today . ' ) ';
-            //     $actdata['status'] = 1;
-            //     $actDta = ActivitynotificationModel::create($actdata); */
-            //     if (!empty($master_pwd)) {
-            //         $arrOutputData['user_id'] = $user->user_id;
-            //         $arrOutputData['password'] = $arrInput['password'];
-            //         $arrOutputData['master_pwd'] = 'TRUE';
-            //     } else {
-			// 		$projectSetting = ProjectSettingModel::first();
-            //         //dd($projectSetting->otp_status);
-            //         if (!empty($projectSetting) && ($projectSetting->otp_status == 'on')) {
-			// 			// if google 2 fa is enable then dont issue OTP
-			// 			//dd($user->google2fa_status);
-            //              if($user->google2fa_status=='enable') {
-
-            //               $arrOutputData['google2faauth']   		= 'TRUE';
-            //               } else { 
-            //             // issue token
-                       
-            //             $otpMode = '';
-            //             if ($user->type != 'Admin') {
-            //                 if (isset($arrInput['otp']) && $arrInput['otp'] == 'mail') {
-            //                     $otpMode = 'email';
-            //                 }
-            //                 if (isset($arrInput['otp']) && $arrInput['otp'] == 'mobile') {
-            //                     $otpMode = 'email';
-            //                 }
-            //             } else {
-                                                       
-            //                 $otpMode = 'mobile';
-            //                 $arrOutputData['google2faauth'] = 'TRUE';
-            //             }
-
-            //             if ($otpMode != '') {
-
-            //                 $arrOutputData = $this->sendOtp($user, $otpMode);
-            //                 $strMessage = "Login successful.";
-            //             }
-            //             	}
-            //         }
-            //     }
-                
-            //     $ip_address=getIpAddrssNew();
-            //     $user_token='Bearer '.$passportResponse->access_token;
-            //     UserModel::where('user_id',$user->user_id)->update(array('user_token' => md5($user_token),'ip_address'=>$ip_address));
-
-            //     $arrOutputData['access_token'] = $strTok;
-            //     $check_Out = \Carbon\Carbon::now()->addMinutes(5)->format('Y-m-d H:i:s');
-			// 	$arrOutputData['check_in'] = $check_Out;
-
-			// 	$temp_info= md5($request->header('User-Agent'));
-
-	        //     UserModel::where('id','=',$user->id)->update(['temp_info'=>$temp_info]);
-
-	        //     return sendResponse($intCode, $strStatus, $strMessage, $arrOutputData);
-            // }*/
+           
 		}
         
     }

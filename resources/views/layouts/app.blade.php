@@ -87,30 +87,43 @@
   <!-- Control Center for Soft Dashboard: parallax effects, scripts for the example pages etc -->
   <script src="../assets/js/soft-ui-dashboard.min.js?v=1.0.3"></script>
 </body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/2.1.0/sweetalert.min.js"></script>
 <script>
 
     $(document).ready(function(){
       
-        
+        $(document).on('click','#sign-out',function(){ 
+          
+            swal({
+                title: `Are you sure?`,
+                text: "If you sign out, it will end your session.",
+                icon: "warning",
+                buttons: true,
+                dangerMode: true,
+            })
+            .then((willDelete) => {
+              if (willDelete) {
 
-        $(document).on('click','#sign-out',function(){        
-           
-            $.ajaxSetup({
-              headers: {'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')}
-            }); 
+                  $.ajaxSetup({
+                    headers: {'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')}
+                  }); 
 
-            $.ajax({
-                  type:'POST',
-                  url:"{{url('/sign-out')}}",
-                  data:{},
-                  success:function(response){
-                      if(response.status == '200'){
-                          window.location.href= "{{url('/sign-in')}}";
-                      }
-                  }
+                  $.ajax({
+                        type:'POST',
+                        url:"{{url('/sign-out')}}",
+                        data:{},
+                        success:function(response){
+                            if(response.status == '200'){
+                                window.location.href= "{{url('/sign-in')}}";
+                            }
+                        }
+                  });
+              }
             });
-
         });
     });
+
+
 </script>
 </html>
