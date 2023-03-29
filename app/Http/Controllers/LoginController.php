@@ -70,7 +70,7 @@ class LoginController extends Controller
 						$request['password'] = decrypt($userData->password);
 						$flag = 1;
 					}
-					
+				
 					if (!Hash::check($request['password'], $userData->bcrypt_password) && $flag == 0) {
 
 						$getCurrentUserLoginIp = getIPAddress();

@@ -41,8 +41,8 @@ class RegisterController extends Controller
         if ($validator->fails()) {
             return redirect('/sign-up')->withErrors($validator)->withInput();
         }else{
-            $request['password'] = encrypt($request['password']);
-			$request['bcrypt_password'] = Hash::make($request['password']);
+            $request['bcrypt_password'] = Hash::make($request['password']);
+            $request['password'] = encrypt($request['password']);			
             $request['fullname'] = $request['first_name'].' '.$request['last_name'];
             $request['type'] = $request['User'];           
             $user = User::create($request->except(['_token','agreement','first_name','last_name','confirm_password','sponser_id','sponser_name']));
